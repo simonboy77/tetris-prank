@@ -38,6 +38,11 @@ int main(int argCount, char **arguments)
             
             isRunning = board_update(&bm);
         }
+        
+        printf("It's full\n");
+        while(true); // Keep that screen 
+        
+        free(xState.screen.pixels);
     }
     
     return 0;
