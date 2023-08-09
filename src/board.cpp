@@ -1,70 +1,445 @@
-void board_reset_tetromino(BoardManager *bm)
+static u32
+board_get_index(BoardManager *bm, u32 x, u32 y)
 {
-    bm->tetromino.xPos = rand() % bm->width;
-    bm->tetromino.yPos = 0;
-    bm->tetromino.shape = (Shape)(rand() % Shape_Amount);
-    bm->tetromino.colour = 0xFF000000 | (rand() % 0x01000000);
+    return x + (y * bm->width);
 }
 
-void board_setup(BoardManager *bm, Image *screen)
+static u32
+board_tetromino_width(Shape shape)
+{
+    switch(shape)
+    {
+        case Shape_Square:  return 2;
+        case Shape_Long:    return 1;
+        case Shape_L:       return 2;
+        case Shape_LM:      return 2;
+        case Shape_Zig:     return 3;
+        case Shape_ZigM:    return 3;
+        case Shape_T:       return 3;
+        
+        default:            return 1;
+    }
+}
+
+static u32
+board_tetromino_x_offset(Shape shape)
+{
+    switch(shape)
+    {
+        case Shape_Square:  return 0;
+        case Shape_Long:    return 0;
+        case Shape_L:       return 0;
+        case Shape_LM:      return 1;
+        case Shape_Zig:     return 1;
+        case Shape_ZigM:    return 1;
+        case Shape_T:       return 1;
+        
+        default:            return 0;
+    }
+}
+
+static b32
+board_spawn_tetromino(BoardManager *bm)
+{
+    bm->tetromino = {};
+    bm->tetromino.shape = (Shape)(rand() % Shape_Amount);
+    
+    u32 tetrominoWidth = board_tetromino_width(bm->tetromino.shape);
+    u32 tetrominoXOffset = board_tetromino_x_offset(bm->tetromino.shape);
+    
+    u32 fitCount = 0;
+    u32 *fitPositions = (u32*)malloc(bm->width * sizeof(u32));
+    
+    for(u32 xPos = 0; xPos < (bm->width - (tetrominoWidth - 1)); ++xPos)
+    {
+        b32 fit = true;
+        for(u32 xSubPos = 0; fit && (xSubPos < tetrominoWidth); ++xSubPos) {
+            fit &= !(bm->board[board_get_index(bm, xPos + xSubPos, 0)]);
+        }
+        
+        if(fit) {
+            fitPositions[fitCount++] = xPos + tetrominoXOffset;
+        }
+    }
+    
+    if(fitCount) {
+        u32 fitIndex = rand() % fitCount;
+        bm->tetromino.xPos = fitPositions[fitIndex];
+        bm->tetromino.colour = 0xFF000000 | (rand() % 0x01000000);
+    }
+    
+    free(fitPositions);
+    return fitCount;
+}
+
+static void
+board_setup(BoardManager *bm, Image *screen)
 {
     bm->width = screen->width / BLOCK_SIDE;
     bm->height = screen->height / BLOCK_SIDE;
     bm->size = bm->width * bm->height;
     
+    if(bm->board) { free(bm->board); }
     bm->board = (u32*)malloc(bm->size * sizeof(u32));
     memset(bm->board, 0, bm->size * sizeof(u32));
-    // bm->board[14] = 0xFF808000;
     
-    board_reset_tetromino(bm);
+    board_spawn_tetromino(bm);
 }
 
-u32 index_from_xyw(u32 x, u32 y, u32 width)
+static void
+board_push_tetromino(BoardManager *bm, Image *screen)
 {
-    return x + (y * width);
-}
-
-void board_push(BoardManager *bm, Image *screen)
-{
-    // Draw tetromino
+    // TODO: Checking if xpos is within bounds shouldnt be necessary after the spawn positions have been
+    // made robust
+    
+    u32 xPos = bm->tetromino.xPos;
+    u32 yPos = bm->tetromino.yPos;
+    u32 colour = bm->tetromino.colour;
+    
+    // push centre block
+    push_block(screen, xPos, yPos, colour);
+    
+    switch(bm->tetromino.shape)
     {
-        u32 xPos = bm->tetromino.xPos * BLOCK_SIDE;
-        u32 yPos = bm->tetromino.yPos * BLOCK_SIDE;
+        case Shape_Square:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                push_block(screen, xPos + 1, yPos, colour);
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                push_block(screen, xPos + 1, yPos - 1, colour);
+            }
+        } break;
         
-        draw_rect(*screen, xPos, yPos, BLOCK_SIDE, BLOCK_SIDE, bm->tetromino.colour);
+        case Shape_Long:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(yPos > 1) {
+                push_block(screen, xPos, yPos - 2, colour);
+            }
+            
+            if(yPos > 2) {
+                push_block(screen, xPos, yPos - 3, colour);
+            }
+        } break;
+        
+        case Shape_L:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(yPos > 1) {
+                push_block(screen, xPos, yPos - 2, colour);
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                push_block(screen, xPos + 1, yPos, colour);
+            }
+        } break;
+        
+        case Shape_LM:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(yPos > 1) {
+                push_block(screen, xPos, yPos - 2, colour);
+            }
+            
+            if(xPos > 0) {
+                push_block(screen, xPos - 1, yPos, colour);
+            }
+        } break;
+        
+        case Shape_Zig:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(xPos > 0) {
+                push_block(screen, xPos - 1, yPos, colour);
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                push_block(screen, xPos + 1, yPos - 1, colour);
+            }
+        } break;
+        
+        case Shape_ZigM:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                push_block(screen, xPos + 1, yPos, colour);
+            }
+            
+            if((yPos > 0) && (xPos > 0)) {
+                push_block(screen, xPos - 1, yPos - 1, colour);
+            }
+        } break;
+        
+        case Shape_T:
+        {
+            if(yPos > 0) {
+                push_block(screen, xPos, yPos - 1, colour);
+            }
+            
+            if((yPos > 0) && (xPos > 0)) {
+                push_block(screen, xPos - 1, yPos - 1, colour);
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                push_block(screen, xPos + 1, yPos - 1, colour);
+            }
+        } break;
+        
+        default: break;
     }
+}
+
+static void
+board_push(BoardManager *bm, Image *screen)
+{
+    board_push_tetromino(bm, screen);
     
-    // Draw board
     for(u32 yBlock = 0; yBlock < bm->height; ++yBlock)
     {
-        u32 yPos = yBlock * BLOCK_SIDE;
-        
         for(u32 xBlock = 0; xBlock < bm->width; ++xBlock)
         {
-            u32 xPos = xBlock * BLOCK_SIDE;
-            u32 boardIndex = index_from_xyw(xBlock, yBlock, bm->width);
+            u32 boardIndex = board_get_index(bm, xBlock, yBlock);
             u32 colour = bm->board[boardIndex];
             
-            draw_rect(*screen, xPos, yPos, BLOCK_SIDE, BLOCK_SIDE, colour);
+            push_block(screen, xBlock, yBlock, colour);
         }
     }
 }
 
-void board_update(BoardManager *bm)
+static b32
+board_move_tetromino(BoardManager *bm)
 {
-    b32 reachedBottom = (bm->tetromino.yPos == (bm->height - 1));
-    b32 canMove = (!bm->board[index_from_xyw(bm->tetromino.xPos, bm->tetromino.yPos + 1, bm->width)]);
+    // TODO: Checking if xpos is within bounds shouldnt be necessary after the spawn positions have been
+    // made robust
+    u32 xPos = bm->tetromino.xPos;
+    u32 yPos = bm->tetromino.yPos;
     
-    if(canMove && !reachedBottom) {
+    b32 reachedBottom = (yPos == (bm->height - 1));
+    b32 canMove = (!bm->board[board_get_index(bm, xPos, yPos + 1)]) && !reachedBottom;
+    
+    if(canMove)
+    {
+        switch(bm->tetromino.shape)
+        {
+            case Shape_Square:
+            {
+                if(xPos < (bm->width - 1)) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
+                }
+            } break;
+            
+            case Shape_Long: {} break; // Doesn't need any extra checking unless rotated
+            
+            case Shape_L:
+            {
+                if(xPos < (bm->width - 1)) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
+                }
+            } break;
+            
+            case Shape_LM:
+            {
+                if(xPos > 0) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos + 1)]);
+                }
+            } break;
+            
+            case Shape_Zig:
+            {
+                if(xPos > 0) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos + 1)]);
+                }
+                
+                if(xPos < (bm->width - 1)) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos)]);
+                }
+            } break;
+            
+            case Shape_ZigM:
+            {
+                if(xPos > 0) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos)]);
+                }
+                
+                if(xPos < (bm->width - 1)) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
+                }
+            } break;
+            
+            case Shape_T:
+            {
+                if(xPos > 0) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos)]);
+                }
+                
+                if(xPos < (bm->width - 1)) {
+                    canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos)]);
+                }
+            } break;
+            
+            default: break;
+        }
+    }
+    
+    if(canMove) {
         bm->tetromino.yPos++;
     }
-    else
+    
+    return canMove;
+}
+
+static void
+board_place_tetromino(BoardManager *bm)
+{
+    u32 xPos = bm->tetromino.xPos;
+    u32 yPos = bm->tetromino.yPos;
+    u32 colour = bm->tetromino.colour;
+    
+    bm->board[board_get_index(bm, xPos, yPos)] = colour;
+    
+    switch(bm->tetromino.shape)
     {
-        u32 boardIndex = index_from_xyw(bm->tetromino.xPos, bm->tetromino.yPos, bm->width);
-        bm->board[boardIndex] = bm->tetromino.colour;
+        case Shape_Square:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
+            }
+        } break;
         
-        board_reset_tetromino(bm);
+        case Shape_Long:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(yPos > 1) {
+                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
+            }
+            
+            if(yPos > 2) {
+                bm->board[board_get_index(bm, xPos, yPos - 3)] = colour;
+            }
+        }
+        break;
+        
+        case Shape_L:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(yPos > 1) {
+                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
+            }
+        } break;
+        
+        case Shape_LM:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(yPos > 1) {
+                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
+            }
+            
+            if(xPos > 0) {
+                bm->board[board_get_index(bm, xPos - 1, yPos)] = colour;
+            }
+        } break;
+        
+        case Shape_Zig:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(xPos > 0) {
+                bm->board[board_get_index(bm, xPos - 1, yPos)] = colour;
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
+            }
+        } break;
+        
+        case Shape_ZigM:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if(xPos < (bm->width - 1)) {
+                bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
+            }
+            
+            if((yPos > 0) && (xPos > 0)) {
+                bm->board[board_get_index(bm, xPos - 1, yPos - 1)] = colour;
+            }
+        } break;
+        
+        case Shape_T:
+        {
+            if(yPos > 0) {
+                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
+            }
+            
+            if((yPos > 0) && (xPos > 0)) {
+                bm->board[board_get_index(bm, xPos - 1, yPos - 1)] = colour;
+            }
+            
+            if((yPos > 0) && (xPos < (bm->width - 1))) {
+                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
+            }
+        } break;
+        
+        default: break;
+    }
+}
+
+static b32
+board_update(BoardManager *bm)
+{
+    b32 running = true;
+    
+    if(!board_move_tetromino(bm)) {
+        board_place_tetromino(bm);
+        running = board_spawn_tetromino(bm);
     }
     
     usleep(100000);
+    return running;
 }

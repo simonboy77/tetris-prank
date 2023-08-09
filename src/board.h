@@ -1,13 +1,11 @@
-#define BLOCK_SIDE 120
-
 enum Shape
 {
     Shape_Square,
     Shape_Long,
     Shape_L,
-    Shape_L_Flipped,
+    Shape_LM,   // Mirrored
     Shape_Zig,
-    Shape_Zig_Flipped,
+    Shape_ZigM, // Mirrored
     Shape_T,
     
     Shape_Amount

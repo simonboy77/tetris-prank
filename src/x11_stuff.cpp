@@ -1,39 +1,51 @@
 static void
-draw_rect(Image screen, u32 x, u32 y, u32 width, u32 height, u32 colour)
+push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 borderPx = BORDER_PX)
 {
+    // NOTE(michiel): Colour is 0xAARRGGBB
     if(colour & 0xFF000000)
     {
+        if ((x + width) > screen->width) {
+            width = screen->width - x;
+        }
+        if ((y + height) > screen->height) {
+            height = screen->height - y;
+        }
+        
+        u32 borderAlpha = colour & 0xFF000000;
+        u32 borderRed = (((colour & 0xFF0000) >> 16) / BORDER_DARKEN_FACTOR) << 16;
+        u32 borderGreen = (((colour & 0xFF00) >> 8) / BORDER_DARKEN_FACTOR) << 8;
+        u32 borderBlue = (colour & 0xFF) / BORDER_DARKEN_FACTOR;
+        u32 borderColour = borderAlpha + borderRed + borderGreen + borderBlue;
+        
         // TODO: inefficient as heck
         for (u32 yAt = y; yAt < y + height; ++yAt) // draw border as black background
         {
             for (u32 xAt = x; xAt < x + width; ++xAt) {
-                screen.pixels[yAt * screen.width + xAt] = 0xFF000000;
+                screen->pixels[yAt * screen->width + xAt] = borderColour;
             }
         }
         
-        u32 border = 4;
-        x += border;
-        y += border;
+        x += borderPx;
+        y += borderPx;
         
-        width -= border * 2;
-        height -= border * 2;
-        
-        
-        // NOTE(michiel): Colour is 0xAARRGGBB
-        if ((x + width) > screen.width) {
-            width = screen.width - x;
-        }
-        if ((y + height) > screen.height) {
-            height = screen.height - y;
-        }
+        width -= borderPx * 2;
+        height -= borderPx * 2;
         
         for (u32 yAt = y; yAt < y + height; ++yAt)
         {
             for (u32 xAt = x; xAt < x + width; ++xAt) {
-                screen.pixels[yAt * screen.width + xAt] = colour;
+                screen->pixels[yAt * screen->width + xAt] = colour;
             }
         }
     }
+}
+
+static void
+push_block(Image *screen, u32 x, u32 y, u32 colour, u32 borderPx = BORDER_PX)
+{
+    x *= BLOCK_SIDE;
+    y *= BLOCK_SIDE;
+    push_rect(screen, x, y, BLOCK_SIDE, BLOCK_SIDE, colour, borderPx);
 }
 
 void x_clear_image(XState *xState)

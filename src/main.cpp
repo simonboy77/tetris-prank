@@ -36,7 +36,7 @@ int main(int argCount, char **arguments)
             board_push(&bm, &xState.screen);
             x_draw_image(&xState);
             
-            board_update(&bm);
+            isRunning = board_update(&bm);
         }
     }
     
