@@ -69,7 +69,15 @@ board_spawn_tetromino(BoardManager *bm)
     }
     
     free(fitPositions);
-    return fitCount;
+    return (fitCount != 0);
+}
+
+static void
+board_reset(BoardManager *bm)
+{
+    if(bm->board) { free(bm->board); }
+    bm->board = (u32*)malloc(bm->size * sizeof(u32));
+    memset(bm->board, 0, bm->size * sizeof(u32));
 }
 
 static void
@@ -79,10 +87,7 @@ board_setup(BoardManager *bm, Image *screen)
     bm->height = screen->height / BLOCK_SIDE;
     bm->size = bm->width * bm->height;
     
-    if(bm->board) { free(bm->board); }
-    bm->board = (u32*)malloc(bm->size * sizeof(u32));
-    memset(bm->board, 0, bm->size * sizeof(u32));
-    
+    board_reset(bm);
     board_spawn_tetromino(bm);
 }
 
@@ -348,6 +353,46 @@ board_place_tetromino(BoardManager *bm)
     }
 }
 
+static void
+board_clear_rows(BoardManager *bm)
+{
+    u32 rowsCleared = 0;
+    for(u32 row = 0; row < bm->height;)
+    {
+        b32 fullRow = true;
+        for(u32 col = 0; fullRow && (col < bm->width); ++col) {
+            fullRow &= (bm->board[board_get_index(bm, col, row)] != 0);
+        }
+        
+        if(fullRow) {
+            if(row > 0) {
+                for(u32 removeRow = row; removeRow > 0; --removeRow) {
+                    for(u32 col = 0; col < bm->width; ++col)
+                    {
+                        u32 blockIndex = board_get_index(bm, col, removeRow);
+                        u32 newBlockIndex = board_get_index(bm, col, removeRow - 1);
+                        bm->board[blockIndex] = bm->board[newBlockIndex];
+                    }
+                }
+            }
+            
+            // Clear top row
+            memset(bm->board, 0, bm->width * sizeof(u32));
+            rowsCleared++;
+        }
+        else {
+            row++;
+        }
+    }
+    
+    if(rowsCleared == 4) {
+        printf("Tetris!\n");
+    }
+    else if(rowsCleared > 0) {
+        printf("Cleared %u rows!\n", rowsCleared);
+    }
+}
+
 static b32
 board_update(BoardManager *bm)
 {
@@ -355,7 +400,16 @@ board_update(BoardManager *bm)
     
     if(!board_move_tetromino(bm)) {
         board_place_tetromino(bm);
-        running = board_spawn_tetromino(bm);
+        board_clear_rows(bm);
+        running &= board_spawn_tetromino(bm);
+        
+        /*
+        if(!board_spawn_tetromino(bm))
+        {
+            printf("reset board\n");
+            memset(bm->board, 0, bm->size * sizeof(u32));
+            board_spawn_tetromino(bm);
+        }*/
     }
     
     usleep(100000);
