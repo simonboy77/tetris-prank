@@ -11,22 +11,37 @@ enum Shape
     Shape_Amount
 };
 
+struct XY
+{
+    s32 x;
+    s32 y;
+};
+
+static XY
+operator -(XY a, XY b)
+{
+    XY outXY;
+    outXY.x = a.x - b.x;
+    outXY.y = a.y - b.y;
+    
+    return outXY;
+}
+
 struct Tetromino
 {
-    u32 colour;
-    
-    u8 xPos;
-    u8 yPos;
-    u8 rotation;
+    XY pos;
     Shape shape;
+    u8 rotation;
+    u32 colour;
 };
 
 struct BoardManager
 {
-    u32 width;
-    u32 height;
+    s32 width;
+    s32 height;
     u32 size;
     
+    b32 full;
     u32 *board;
     Tetromino tetromino;
 };

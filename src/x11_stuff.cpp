@@ -41,28 +41,88 @@ push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 bo
 }
 
 static void
-push_block(Image *screen, u32 x, u32 y, u32 colour, u32 borderPx = BORDER_PX)
+push_block(Image *screen, u32 x, u32 y, u32 colour, int mouseBlockX, int mouseBlockY, u32 borderPx = BORDER_PX)
 {
+    if((colour & 0xFF000000) &&
+       (mouseBlockX >= (x - MOUSE_RADIUS)) && (mouseBlockX <= (x + MOUSE_RADIUS)) &&
+       (mouseBlockY >= y - (MOUSE_RADIUS)) && (mouseBlockY <= (y + MOUSE_RADIUS))) {
+        //u32 alpha = ((colour & 0xFF000000) >> 24) / 2;
+        //colour = (colour & 0x00FFFFF) + (alpha << 24);
+        colour = 0x80808080;
+    }
+    
     x *= BLOCK_SIDE;
     y *= BLOCK_SIDE;
+    
     push_rect(screen, x, y, BLOCK_SIDE, BLOCK_SIDE, colour, borderPx);
 }
 
-void x_clear_image(XState *xState)
+static void
+x_clear_image(XState *xState)
 {
     Image *screen = &xState->screen;
     memset(screen->pixels, 0, screen->width * screen->height * sizeof(u32));
 }
 
-void x_draw_image(XState *xState)
+static b32
+x_get_mouse_block(XState *xState, int *mouseBlockX, int *mouseBlockY)
+{
+    Window root, child;
+    int winX, winY;
+    u32 mask;
+    
+    int xBlockPrev = *mouseBlockX;
+    int yBlockPrev = *mouseBlockY;
+    
+    XQueryPointer(xState->display, xState->window, &root, &child, mouseBlockX, mouseBlockY, &winX, &winY, &mask);
+    
+    *mouseBlockX /= BLOCK_SIDE;
+    *mouseBlockY /= BLOCK_SIDE;
+    
+    return (xBlockPrev != *mouseBlockX) || (yBlockPrev != *mouseBlockY);
+}
+
+static b32
+x_get_arrow_keys(XState *xState, Key *left, Key *right, Key *up, Key *down)
+{
+    // TODO: Check if there are keycodes
+    Key leftPrev  = *left;
+    Key rightPrev = *right;
+    Key upPrev    = *up;
+    Key downPrev  = *down;
+    
+    char keyStates[32];
+    XQueryKeymap(xState->display, keyStates);
+    
+    left->isDown  = keyStates[14] & 0x02; // byte 15, bit 2
+    right->isDown = keyStates[14] & 0x04; // byte 15, bit 3
+    up->isDown    = keyStates[13] & 0x80; // byte 14, bit 8
+    down->isDown  = keyStates[14] & 0x10; // byte 15, bit 5
+    
+    left->isPressed = (!leftPrev.isDown && left->isDown);
+    right->isPressed = (!rightPrev.isDown && right->isDown);
+    up->isPressed = (!upPrev.isDown && up->isDown);
+    down->isPressed = (!downPrev.isDown && down->isDown);
+    
+    left->isReleased  = (leftPrev.isDown  && !left->isDown);
+    right->isReleased = (rightPrev.isDown && !right->isDown);
+    up->isReleased    = (upPrev.isDown    && !up->isDown);
+    down->isReleased  = (downPrev.isDown  && !down->isDown);
+    
+    return (leftPrev != *left) || (rightPrev != *right) || (upPrev != *up) || (downPrev != *down);
+}
+
+static void
+x_draw_image(XState *xState)
 {
     XPutImage(xState->display, xState->window, xState->gc, xState->image, 0, 0, 0, 0, xState->screen.width, xState->screen.height);
     XSync(xState->display, False);
 }
 
-bool x_setup(XState *xState)
+static b32
+x_setup(XState *xState)
 {
-    bool success = false;
+    b32 success = false;
     
     char *displayName = getenv("DISPLAY");
     xState->display = XOpenDisplay(displayName);
