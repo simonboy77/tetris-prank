@@ -41,41 +41,87 @@ board_tetromino_x_offset(Shape shape)
 static XY
 board_shape_offset(Shape shape, u32 index)
 {
-    // NOTE: We only handle blocks that are actually offset, all others can just pass through
     XY offset = { 0, 0 };
     
-    if((shape != Shape_Long) && (index < board_tetromino_width(shape)))
-    {
-        switch(index)
+    switch(shape)
         {
-            case 0:
+            case Shape_Square:
             {
-                if((shape == Shape_LM) || (shape == Shape_Zig)) {
-                    offset = { -1, 0 };
+                switch(index)
+                {
+                    case 0: { offset = {  0, -1 }; } break; //
+                    case 1: { offset = {  1, -1 }; } break; //  **
+                    case 2: { offset = {  0,  0 }; } break; //  **
+                    case 3: { offset = {  1,  0 }; } break; //
                 }
-                else if((shape == Shape_T) || (shape == Shape_ZigM)) {
-                    offset = { -1, -1 };
-                }
-            } break;
-            
-            case 1:
+            }; break;
+
+            case Shape_Long:
             {
-                if(shape == Shape_L || shape == Shape_Square) {
-                    offset = { 1, 0 };
+                switch(index)
+                {
+                    case 0: { offset = {  0, -3 }; } break; //  *
+                    case 1: { offset = {  0, -2 }; } break; //  *
+                    case 2: { offset = {  0, -1 }; } break; //  *
+                    case 3: { offset = {  0,  0 }; } break; //  *
                 }
-            } break;
-            
-            case 2:
+            }; break;
+
+            case Shape_L:
             {
-                if((shape == Shape_Zig) || (shape == Shape_T)) {
-                    offset = { 1, -1 };
+                switch(index)
+                {
+                    case 0: { offset = {  0, -2 }; } break; //
+                    case 1: { offset = {  0, -1 }; } break; //  *
+                    case 2: { offset = {  0,  0 }; } break; //  *
+                    case 3: { offset = {  1,  0 }; } break; //  **
                 }
-                else if(shape == Shape_ZigM) {
-                    offset = { 1, 0 };
+            }; break;
+
+            case Shape_LM:
+            {
+                switch(index)
+                {
+                    case 0: { offset = {  0, -2 }; } break; //
+                    case 1: { offset = {  0, -1 }; } break; //  *
+                    case 2: { offset = {  0,  0 }; } break; //  *
+                    case 3: { offset = { -1,  0 }; } break; // **
                 }
-            } break;
+            }; break;
+
+            case Shape_Zig:
+            {
+                switch(index)
+                {
+                    case 0: { offset = { -1,  0 }; } break; //
+                    case 1: { offset = {  0, -1 }; } break; //  **
+                    case 2: { offset = {  0,  0 }; } break; // **
+                    case 3: { offset = {  1, -1 }; } break; //
+                }
+            }; break;
+
+            case Shape_ZigM:
+            {
+                switch(index)
+                {
+                    case 0: { offset = { -1, -1 }; } break; //
+                    case 1: { offset = {  0, -1 }; } break; // **
+                    case 2: { offset = {  0,  0 }; } break; //  **
+                    case 3: { offset = {  0,  0 }; } break; //
+                }
+            }; break;
+
+            case Shape_T:
+            {
+                switch(index)
+                {
+                    case 0: { offset = { -1, -1 }; } break; //
+                    case 1: { offset = {  0, -1 }; } break; // ***
+                    case 2: { offset = {  0,  0 }; } break; //  *
+                    case 3: { offset = {  1, -1 }; } break; //
+                }
+            }; break;
         }
-    }
     
     return offset;
 }

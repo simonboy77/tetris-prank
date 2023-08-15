@@ -7,7 +7,8 @@ board_spawn_tetromino(BoardManager *bm)
 {    
     bm->tetromino = {};
     bm->tetromino.shape = (Shape)(rand() % Shape_Amount);
-    
+    //bm->tetromino.shape = Shape_Zig;
+
     s32 tetrominoWidth = board_tetromino_width(bm->tetromino.shape);
     s32 tetrominoXOffset = board_tetromino_x_offset(bm->tetromino.shape);
     
@@ -29,8 +30,8 @@ board_spawn_tetromino(BoardManager *bm)
     if(fitCount) {
         u32 fitIndex = rand() % fitCount;
         bm->tetromino.pos.x = fitPositions[fitIndex];
-        //bm->tetromino.colour = 0xFF000000 | (rand() % 0x01000000);
-        bm->tetromino.colour = 0x01000000 | (rand() % 0x01000000);
+        bm->tetromino.colour = 0xFF000000 | (rand() % 0x01000000);
+        //bm->tetromino.colour = 0x01000000 | (rand() % 0x01000000);
     }
     
     free(fitPositions);

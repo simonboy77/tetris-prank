@@ -20,10 +20,15 @@ board_move_tetromino(BoardManager *bm)
         b32 reachedBottom = (yPos == (bm->height - 1));
         canMove = !reachedBottom;
         
-        for(u32 blockId = 0; canMove && (blockId < board_tetromino_width(shape)); ++blockId)
+        for(u32 blockId = 0; canMove && (blockId < 4); ++blockId)
         {
             XY offset = board_shape_offset(shape, blockId);
-            canMove &= (bm->board[board_get_index(bm, (xPos + offset.x), (yPos + offset.y + 1))] == 0);
+            s32 offsetX = xPos + offset.x;
+            s32 offsetY = yPos + offset.y;
+
+            if(offsetY > 0) {
+                canMove &= (bm->board[board_get_index(bm, offsetX, offsetY + 1)] == 0);
+            }
         }
     }
     
