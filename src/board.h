@@ -18,12 +18,34 @@ struct XY
 };
 
 static XY
+operator +=(XY &a, XY b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
+
+static XY
+operator +(XY a, XY b)
+{
+    XY outXY = a;
+    outXY += b;
+    return outXY;
+}
+
+static XY
+operator -=(XY &a, XY b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    return a;
+}
+
+static XY
 operator -(XY a, XY b)
 {
-    XY outXY;
-    outXY.x = a.x - b.x;
-    outXY.y = a.y - b.y;
-    
+    XY outXY = a;
+    outXY -= b;
     return outXY;
 }
 

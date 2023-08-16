@@ -68,107 +68,14 @@ board_setup(BoardManager *bm, Image *screen)
 static void
 board_place_tetromino(BoardManager *bm)
 {
-    s32 xPos = bm->tetromino.pos.x;
-    s32 yPos = bm->tetromino.pos.y;
-    u32 colour = bm->tetromino.colour;
-    
-    bm->board[board_get_index(bm, xPos, yPos)] = colour;
-    
-    switch(bm->tetromino.shape)
+    for(u32 blockId = 0; blockId < 4; ++blockId)
     {
-        case Shape_Square:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
-            }
-            
-            bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
-        } break;
-        
-        case Shape_Long:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-            }
-            
-            if(yPos > 1) {
-                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
-            }
-            
-            if(yPos > 2) {
-                bm->board[board_get_index(bm, xPos, yPos - 3)] = colour;
-            }
-        }
-        break;
-        
-        case Shape_L:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-            }
-            
-            if(yPos > 1) {
-                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
-            }
-            
-            bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
-        } break;
-        
-        case Shape_LM:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-            }
-            
-            if(yPos > 1) {
-                bm->board[board_get_index(bm, xPos, yPos - 2)] = colour;
-            }
-            
-            bm->board[board_get_index(bm, xPos - 1, yPos)] = colour;
-        } break;
-        
-        case Shape_Zig:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
-            }
-            
-            bm->board[board_get_index(bm, xPos - 1, yPos)] = colour;
-        } break;
-        
-        case Shape_ZigM:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-                bm->board[board_get_index(bm, xPos - 1, yPos - 1)] = colour;
-            }
-            
-            bm->board[board_get_index(bm, xPos + 1, yPos)] = colour;
-        } break;
-        
-        case Shape_T:
-        {
-            if(yPos > 0) {
-                bm->board[board_get_index(bm, xPos, yPos - 1)] = colour;
-                bm->board[board_get_index(bm, xPos - 1, yPos - 1)] = colour;
-                bm->board[board_get_index(bm, xPos + 1, yPos - 1)] = colour;
-            }
-        } break;
-        
-        default: break;
-    }
-}
+        XY offset = board_shape_offset(bm->tetromino.shape, blockId);
+        s32 offsetX = bm->tetromino.pos.x + offset.x;
+        s32 offsetY = bm->tetromino.pos.y + offset.y;
 
-static void
-board_invert_colours(BoardManager *bm)
-{
-    for(u32 blockId = 0; blockId < bm->size; ++blockId)
-    {
-        u32 colour = bm->board[blockId];
-        if(colour & 0xFF000000) {
-            bm->board[blockId] = (colour & 0xFF000000) + (~colour & 0x00FFFFFF);
+        if(offsetY >= 0) {
+            bm->board[board_get_index(bm, offsetX, offsetY)] = bm->tetromino.colour;
         }
     }
 }
@@ -218,7 +125,7 @@ board_update(BoardManager *bm, b32 resetOnFull = false)
 {
     if(!bm->full)
     {
-        if(!board_move_tetromino(bm)) {
+        if(!board_move_tetromino_down(bm)) {
             board_place_tetromino(bm);
             board_clear_rows(bm);
 
@@ -230,8 +137,6 @@ board_update(BoardManager *bm, b32 resetOnFull = false)
                     bm->full = true;
                 }   
             }
-
-            bm->full = !board_spawn_tetromino(bm);
         }
     }
     

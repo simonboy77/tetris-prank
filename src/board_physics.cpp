@@ -1,93 +1,76 @@
 static b32
-board_drop_tetromino(BoardManager *bm)
-{
-    
-    
-    return false;
-}
-
-static b32
-board_move_tetromino(BoardManager *bm)
+board_can_tetromino_move(BoardManager *bm, XY movement)
 {
     b32 canMove = false;
     
     if(!bm->full)
     {
-        s32 xPos = bm->tetromino.pos.x;
-        s32 yPos = bm->tetromino.pos.y;
-        Shape shape = bm->tetromino.shape;
-        
-        b32 reachedBottom = (yPos == (bm->height - 1));
-        canMove = !reachedBottom;
-        
+        canMove = true;
         for(u32 blockId = 0; canMove && (blockId < 4); ++blockId)
         {
-            XY offset = board_shape_offset(shape, blockId);
-            s32 offsetX = xPos + offset.x;
-            s32 offsetY = yPos + offset.y;
+            XY offset = board_shape_offset(bm->tetromino.shape, blockId);
+            s32 destX = bm->tetromino.pos.x + offset.x + movement.x;
+            s32 destY = bm->tetromino.pos.y + offset.y + movement.y;
 
-            if(offsetY > 0) {
-                canMove &= (bm->board[board_get_index(bm, offsetX, offsetY + 1)] == 0);
+            canMove &= (destX >= 0);
+            canMove &= (destX < bm->width);
+            canMove &= (destY < bm->height);
+
+            if(destY > 0) { // Parts above board are ignored
+                canMove &= (bm->board[board_get_index(bm, destX, destY)] == 0);
             }
         }
-    }
-    
-    if(canMove) {
-        bm->tetromino.pos.y++;
     }
     
     return canMove;
 }
 
 static b32
-board_move_tetromino_old(BoardManager *bm)
+board_move_tetromino(BoardManager *bm, XY movement)
 {
-    s32 xPos = bm->tetromino.pos.x;
-    s32 yPos = bm->tetromino.pos.y;
+    if(board_can_tetromino_move(bm, movement)) {
+        bm->tetromino.pos += movement;
+        return true;
+    }
     
-    b32 reachedBottom = (yPos == (bm->height - 1));
-    b32 canMove = (!bm->board[board_get_index(bm, xPos, yPos + 1)]) && !reachedBottom;
-    
-    if(canMove)
+    return false;
+}
+
+static b32
+board_move_tetromino_left(BoardManager *bm)
+{
+    return board_move_tetromino(bm, { -1, 0 });
+}
+
+static b32
+board_move_tetromino_right(BoardManager *bm)
+{
+    return board_move_tetromino(bm, { 1, 0 });
+}
+
+static b32
+board_move_tetromino_down(BoardManager *bm)
+{
+    return board_move_tetromino(bm, { 0, 1 });
+}
+
+static b32
+board_drop_tetromino(BoardManager *bm)
+{
+    int dropDistance = 0;
+    int maxDrop = (bm->height - 1) - bm->tetromino.pos.y;
+
+    if(maxDrop > 0)
     {
-        switch(bm->tetromino.shape)
-        {
-            case Shape_Square: {
-                canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
-            } break;
-            
-            case Shape_Long: {} break; // Doesn't need any extra checking unless rotated
-            
-            case Shape_L: {
-                canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
-            } break;
-            
-            case Shape_LM: {
-                canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos + 1)]);
-            } break;
-            
-            case Shape_Zig: {
-                canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos + 1)]);
-                canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos)]);
-            } break;
-            
-            case Shape_ZigM: {
-                canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos)]);
-                canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos + 1)]);
-            } break;
-            
-            case Shape_T: {
-                canMove &= (!bm->board[board_get_index(bm, xPos - 1, yPos)]);
-                canMove &= (!bm->board[board_get_index(bm, xPos + 1, yPos)]);
-            } break;
-            
-            default: break;
+        while(board_can_tetromino_move(bm, { 0, dropDistance + 1 }) && (dropDistance < maxDrop)) {
+            dropDistance++;
         }
     }
-    
-    if(canMove) {
-        bm->tetromino.pos.y++;
+
+    if(dropDistance > 0) {
+        board_move_tetromino(bm, { 0, dropDistance });
+        return true;
     }
-    
-    return canMove;
+
+    return false;
 }

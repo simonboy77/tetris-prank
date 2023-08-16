@@ -107,7 +107,7 @@ board_shape_offset(Shape shape, u32 index)
                     case 0: { offset = { -1, -1 }; } break; //
                     case 1: { offset = {  0, -1 }; } break; // **
                     case 2: { offset = {  0,  0 }; } break; //  **
-                    case 3: { offset = {  0,  0 }; } break; //
+                    case 3: { offset = {  1,  0 }; } break; //
                 }
             }; break;
 
@@ -124,4 +124,16 @@ board_shape_offset(Shape shape, u32 index)
         }
     
     return offset;
+}
+
+static void
+board_invert_colours(BoardManager *bm)
+{
+    for(u32 blockId = 0; blockId < bm->size; ++blockId)
+    {
+        u32 colour = bm->board[blockId];
+        if(colour & 0xFF000000) {
+            bm->board[blockId] = (colour & 0xFF000000) + (~colour & 0x00FFFFFF);
+        }
+    }
 }

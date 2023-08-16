@@ -60,6 +60,8 @@ int main(int argCount, char **arguments)
         
         while (isRunning)
         {
+            b32 refresh = false;
+            
             curTime = linux_get_wall_clock();
             f32 secondsElapsed = linux_get_seconds_elapsed(timeStamp, curTime);
             
@@ -70,54 +72,77 @@ int main(int argCount, char **arguments)
             
             if(!bm.full && (lastBoardUpdate >= BOARD_REFRESH_TIME)) {
                 board_update(&bm, resetOnFull);
-                
-                x_clear_image(&xState);
-                board_push(&bm, &xState.screen, mouseBlockX, mouseBlockY);
-                x_draw_image(&xState);
-                
                 lastBoardUpdate = 0.0f;
+                refresh = true;
             }
             
             if(lastMouseQuery >= MOUSE_REFRESH_TIME) {
-                if(x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY))
-                {
-                    x_clear_image(&xState);
-                    board_push(&bm, &xState.screen, mouseBlockX, mouseBlockY);
-                    x_draw_image(&xState);
-                }
-                
                 lastMouseQuery = 0.0f;
+                refresh = x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY);
             }
             
             if(lastKeysQuery >= KEYS_REFRESH_TIME) {
                 if(x_get_arrow_keys(&xState, &left, &right, &up, &down))
                 {
-                    printf("arrows changed\n");
+                    if(left.isPressed) {
+                        if(board_move_tetromino_left(&bm)) {
+                            lastMovement = 0.0f;
+                            refresh = true;
+                        }
+                    }
+
+                    if(right.isPressed) {
+                        if(board_move_tetromino_right(&bm)) {
+                            lastMovement = 0.0f;
+                            refresh = true;
+                        }
+                    }
+
+                    if(up.isPressed) {
+                        if(board_drop_tetromino(&bm)) {
+                            lastBoardUpdate = BOARD_REFRESH_TIME;
+                            refresh = true;
+                        }
+                    }
                 }
                 
                 lastKeysQuery = 0.0f;
             }
             
             if(!bm.full && (lastMovement >= MOVEMENT_SPEED)) {
+                if(left.isDown) {
+                    if(board_move_tetromino_left(&bm)) {
+                        lastMovement = 0.0f;
+                        refresh = true;
+                    }
+                }
+
+                if(right.isDown) {
+                    if(board_move_tetromino_right(&bm)) {
+                        lastMovement = 0.0f;
+                        refresh = true;
+                    }
+                }
+                
                 if(down.isDown) {
                     board_update(&bm, resetOnFull);
-                    
-                    x_clear_image(&xState);
-                    board_push(&bm, &xState.screen, mouseBlockX, mouseBlockY);
-                    x_draw_image(&xState);
-                    
                     lastBoardUpdate = 0.0f;
+
+                    refresh = true;
                 }
                 
                 lastMovement = 0.0f;
+            }
+
+            if(refresh) {
+                x_clear_image(&xState);
+                board_push(&bm, &xState.screen, mouseBlockX, mouseBlockY);
+                x_draw_image(&xState);
             }
             
             usleep(10);
             timeStamp = curTime;
         }
-        
-        printf("It's full\n");
-        while(true); // Keep that screen 
         
         free(xState.screen.pixels);
     }
