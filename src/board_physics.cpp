@@ -8,7 +8,7 @@ board_can_tetromino_move(BoardManager *bm, XY movement)
         canMove = true;
         for(u32 blockId = 0; canMove && (blockId < 4); ++blockId)
         {
-            XY offset = board_shape_offset(bm->tetromino.shape, blockId);
+            XY offset = board_shape_offset(bm->tetromino.shape, blockId, bm->tetromino.rotation);
             s32 destX = bm->tetromino.pos.x + offset.x + movement.x;
             s32 destY = bm->tetromino.pos.y + offset.y + movement.y;
 
@@ -73,4 +73,20 @@ board_drop_tetromino(BoardManager *bm)
     }
 
     return false;
+}
+
+static b32
+board_rotate_tetromino(BoardManager *bm)
+{
+    u32 prevRotation = bm->tetromino.rotation;
+    u32 nextRotation = (prevRotation >= 3) ? 0 : (prevRotation + 1);
+    bm->tetromino.rotation = nextRotation;
+
+    if(board_can_tetromino_move(bm, { 0, 0 })) {
+        return true;
+    }
+    else {
+        bm->tetromino.rotation = prevRotation;
+        return false;
+    }
 }

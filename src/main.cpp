@@ -19,7 +19,7 @@
 #include "board.cpp"
 
 static struct timespec
-linux_get_wall_clock(void)
+get_wall_clock(void)
 {
     struct timespec clock;
     clock_gettime(CLOCK_MONOTONIC, &clock);
@@ -27,10 +27,18 @@ linux_get_wall_clock(void)
 }
 
 static f32
-linux_get_seconds_elapsed(struct timespec start, struct timespec end)
+get_seconds_elapsed(struct timespec start, struct timespec end)
 {
     return ((f32)(end.tv_sec - start.tv_sec)
             + ((f32)(end.tv_nsec - start.tv_nsec) * 1e-9f));
+}
+
+static void
+refresh_image(XState *xState, BoardManager *bm, int mouseBlockX, int mouseBlockY)
+{
+    x_clear_image(xState);
+    board_push(bm, &xState->screen, mouseBlockX, mouseBlockY);
+    x_draw_image(xState);
 }
 
 int main(int argCount, char **arguments)
@@ -44,104 +52,108 @@ int main(int argCount, char **arguments)
         BoardManager bm = {};
         board_setup(&bm, &xState.screen);
         
-        int mouseBlockX, mouseBlockY;
-        Key left, right, up, down;
+        int mouseBlockX = 0, mouseBlockY = 0;
+        x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY);
+
+        Key left = {}, right = {}, up = {}, down = {}, esc = {};
+        x_get_keys(&xState, &left, &right, &up, &down, &esc);
         
-        b32 isRunning = true;
-        b32 resetOnFull = false;
-        
-        f32 lastBoardUpdate = 0.0f;
-        f32 lastMouseQuery  = 0.0f;
-        f32 lastKeysQuery   = 0.0f;
-        f32 lastMovement    = 0.0f;
-        
-        timespec timeStamp = linux_get_wall_clock();
+        f32 lastBoardUpdate = 0.0f, lastMouseQuery = 0.0f, lastKeysQuery = 0.0f, lastMovementX = 0.0f, lastMovementY = 0.0f;
+        timespec timeStamp = get_wall_clock();
         timespec curTime = timeStamp;
+
+        b32 isRunning = true;
+        b32 fatigue = false;
+        b32 resetOnFull = false;
+        b32 randomTetrominoPosition = false;
         
         while (isRunning)
         {
-            b32 refresh = false;
+            curTime = get_wall_clock();
+            f32 secondsElapsed = get_seconds_elapsed(timeStamp, curTime);
             
-            curTime = linux_get_wall_clock();
-            f32 secondsElapsed = linux_get_seconds_elapsed(timeStamp, curTime);
-            
-            lastBoardUpdate += secondsElapsed;
+            lastBoardUpdate += secondsElapsed * (1.0f + (bm.score / 10.0f));
             lastMouseQuery  += secondsElapsed;
             lastKeysQuery   += secondsElapsed;
-            lastMovement    += secondsElapsed;
+            lastMovementX   += secondsElapsed;
+            lastMovementY   += secondsElapsed;
+
+            b32 refresh = false;
             
-            if(!bm.full && (lastBoardUpdate >= BOARD_REFRESH_TIME)) {
-                board_update(&bm, resetOnFull);
-                lastBoardUpdate = 0.0f;
+            if(!bm.full && (lastBoardUpdate >= BOARD_UPDATE_TIME)) {
+                board_update(&bm, resetOnFull, randomTetrominoPosition);
+                lastBoardUpdate -= BOARD_UPDATE_TIME;
+                fatigue = false;
                 refresh = true;
             }
             
-            if(lastMouseQuery >= MOUSE_REFRESH_TIME) {
-                lastMouseQuery = 0.0f;
-                refresh = x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY);
+            if(lastMouseQuery >= MOUSE_QUERY_TIME) {
+                lastMouseQuery -= MOUSE_QUERY_TIME;
+                refresh |= x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY);
             }
             
-            if(lastKeysQuery >= KEYS_REFRESH_TIME) {
-                if(x_get_arrow_keys(&xState, &left, &right, &up, &down))
+            if(lastKeysQuery >= KEYS_QUERY_TIME) {
+                if(x_get_keys(&xState, &left, &right, &up, &down, &esc))
                 {
-                    if(left.isPressed) {
-                        if(board_move_tetromino_left(&bm)) {
-                            lastMovement = 0.0f;
-                            refresh = true;
-                        }
+                    if(left.isPressed && board_move_tetromino_left(&bm)) {
+                        lastMovementX = 0.0f;
+                        refresh = true;
                     }
 
-                    if(right.isPressed) {
-                        if(board_move_tetromino_right(&bm)) {
-                            lastMovement = 0.0f;
-                            refresh = true;
-                        }
+                    if(right.isPressed && board_move_tetromino_right(&bm)) {
+                        lastMovementX = 0.0f;
+                        refresh = true;
                     }
 
-                    if(up.isPressed) {
-                        if(board_drop_tetromino(&bm)) {
-                            lastBoardUpdate = BOARD_REFRESH_TIME;
-                            refresh = true;
-                        }
+                    if(up.isPressed && board_rotate_tetromino(&bm)) {
+                        refresh = true;
                     }
+
+                    if(down.isPressed) {
+                        lastMovementY = Y_MOVEMENT_SPEED;
+                    }
+
+                    if(esc.isPressed) {
+                        isRunning = false;
+                    }
+
+                    // If board_drop_tetromino() { lastBoardUpdate = BOARD_UPDATE_TIME; refresh = true; }
                 }
                 
-                lastKeysQuery = 0.0f;
+                lastKeysQuery -= KEYS_QUERY_TIME;
             }
             
-            if(!bm.full && (lastMovement >= MOVEMENT_SPEED)) {
-                if(left.isDown) {
-                    if(board_move_tetromino_left(&bm)) {
-                        lastMovement = 0.0f;
-                        refresh = true;
-                    }
+            if(lastMovementX >= X_MOVEMENT_SPEED) {
+                if(left.isDown && board_move_tetromino_left(&bm)) {
+                    refresh = true;
                 }
 
-                if(right.isDown) {
-                    if(board_move_tetromino_right(&bm)) {
-                        lastMovement = 0.0f;
-                        refresh = true;
-                    }
-                }
-                
-                if(down.isDown) {
-                    board_update(&bm, resetOnFull);
-                    lastBoardUpdate = 0.0f;
-
+                if(right.isDown && board_move_tetromino_right(&bm)) {
                     refresh = true;
                 }
                 
-                lastMovement = 0.0f;
+                lastMovementX -= X_MOVEMENT_SPEED;
             }
 
-            if(refresh) {
-                x_clear_image(&xState);
-                board_push(&bm, &xState.screen, mouseBlockX, mouseBlockY);
-                x_draw_image(&xState);
+            if(lastMovementY >= Y_MOVEMENT_SPEED) {
+                if(down.isDown) {
+                    if(board_move_tetromino_down(&bm)) {
+                        lastBoardUpdate = 0.0f;
+                        refresh = true;
+                    }
+                    else if (!fatigue) {
+                        lastBoardUpdate = BOARD_UPDATE_TIME / 4.0f;
+                        fatigue = true;
+                    }
+                }
+                
+                lastMovementY -= Y_MOVEMENT_SPEED;
             }
-            
-            usleep(10);
+
+            if(refresh) { refresh_image(&xState, &bm, mouseBlockX, mouseBlockY); }
             timeStamp = curTime;
+
+            usleep(10);
         }
         
         free(xState.screen.pixels);

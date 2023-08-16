@@ -83,33 +83,37 @@ x_get_mouse_block(XState *xState, int *mouseBlockX, int *mouseBlockY)
 }
 
 static b32
-x_get_arrow_keys(XState *xState, Key *left, Key *right, Key *up, Key *down)
+x_get_keys(XState *xState, Key *left, Key *right, Key *up, Key *down, Key *esc)
 {
     // TODO: Check if there are keycodes
     Key leftPrev  = *left;
     Key rightPrev = *right;
     Key upPrev    = *up;
     Key downPrev  = *down;
+    Key escPrev   = *esc;
     
     char keyStates[32];
     XQueryKeymap(xState->display, keyStates);
-    
+
     left->isDown  = keyStates[14] & 0x02; // byte 15, bit 2
     right->isDown = keyStates[14] & 0x04; // byte 15, bit 3
     up->isDown    = keyStates[13] & 0x80; // byte 14, bit 8
     down->isDown  = keyStates[14] & 0x10; // byte 15, bit 5
-    
-    left->isPressed = (!leftPrev.isDown && left->isDown);
+    esc->isDown   = keyStates[1]  & 0x02; // byte 2,  bit 7
+
+    left->isPressed  = (!leftPrev.isDown && left->isDown);
     right->isPressed = (!rightPrev.isDown && right->isDown);
-    up->isPressed = (!upPrev.isDown && up->isDown);
-    down->isPressed = (!downPrev.isDown && down->isDown);
+    up->isPressed    = (!upPrev.isDown && up->isDown);
+    down->isPressed  = (!downPrev.isDown && down->isDown);
+    esc->isPressed   = (!escPrev.isDown && esc->isDown);
     
     left->isReleased  = (leftPrev.isDown  && !left->isDown);
     right->isReleased = (rightPrev.isDown && !right->isDown);
     up->isReleased    = (upPrev.isDown    && !up->isDown);
     down->isReleased  = (downPrev.isDown  && !down->isDown);
+    esc->isReleased   = (escPrev.isDown   && !esc->isDown);
     
-    return (leftPrev != *left) || (rightPrev != *right) || (upPrev != *up) || (downPrev != *down);
+    return (leftPrev != *left) || (rightPrev != *right) || (upPrev != *up) || (downPrev != *down) || (escPrev != *esc);
 }
 
 static void

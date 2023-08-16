@@ -66,4 +66,6 @@ struct BoardManager
     b32 full;
     u32 *board;
     Tetromino tetromino;
+
+    u32 score;
 };

@@ -9,7 +9,8 @@ typedef float      f32;
 #define BORDER_DARKEN_FACTOR  2
 #define MOUSE_RADIUS          0
 
-#define BOARD_REFRESH_TIME    0.6f
-#define MOUSE_REFRESH_TIME    0.01f
-#define KEYS_REFRESH_TIME     0.01f
-#define MOVEMENT_SPEED        0.04f
+#define BOARD_UPDATE_TIME     0.6f
+#define MOUSE_QUERY_TIME      0.01f
+#define KEYS_QUERY_TIME       0.01f
+#define X_MOVEMENT_SPEED      0.10f
+#define Y_MOVEMENT_SPEED      0.04f
