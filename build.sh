@@ -1,5 +1,6 @@
-# sudo apt install libxext-dev
-# sudo apt install libxtst-dev
+# sudo apt install libxtst-dev (should also install libx11-dev and libxext-dev)
+
+mkdir -p out
 
 if [ "$1" == "-d" ]; then
     echo "Debug build"
