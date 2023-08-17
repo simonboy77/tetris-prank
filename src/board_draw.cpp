@@ -3,7 +3,7 @@ static void
 board_push_tetromino(BoardManager *bm, Image *screen, int mouseBlockX, int mouseBlockY)
 {
     u32 colour = bm->tetromino.colour;
-    u32 previewColour = (colour & 0x00FFFFFF) + 0x20000000;
+    u32 previewColour = set_alpha(colour, 0x60);
     u32 dropDistance = board_get_tetromino_drop_distance(bm);
 
     for(u32 blockId = 0; blockId < 4; ++blockId)

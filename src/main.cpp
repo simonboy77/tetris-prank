@@ -96,12 +96,12 @@ int main(int argCount, char **arguments)
                 if(x_get_keys(&xState, &left, &right, &up, &down, &esc, &shift))
                 {
                     if(left.isPressed && board_move_tetromino_left(&bm)) {
-                        lastMovementX = 0.0f;
+                        lastMovementX = -X_MOVEMENT_SPEED;
                         refresh = true;
                     }
 
                     if(right.isPressed && board_move_tetromino_right(&bm)) {
-                        lastMovementX = 0.0f;
+                        lastMovementX = -X_MOVEMENT_SPEED;
                         refresh = true;
                     }
 
