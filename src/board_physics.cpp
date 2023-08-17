@@ -54,18 +54,26 @@ board_move_tetromino_down(BoardManager *bm)
     return board_move_tetromino(bm, { 0, 1 });
 }
 
-static b32
-board_drop_tetromino(BoardManager *bm)
+static u32
+board_get_tetromino_drop_distance(BoardManager *bm)
 {
     int dropDistance = 0;
     int maxDrop = (bm->height - 1) - bm->tetromino.pos.y;
 
-    if(maxDrop > 0)
-    {
+    if(maxDrop > 0) {
         while(board_can_tetromino_move(bm, { 0, dropDistance + 1 }) && (dropDistance < maxDrop)) {
             dropDistance++;
         }
     }
+
+    return dropDistance;
+}
+
+static b32
+board_drop_tetromino(BoardManager *bm)
+{
+    int dropDistance = board_get_tetromino_drop_distance(bm);
+    int maxDrop = (bm->height - 1) - bm->tetromino.pos.y;
 
     if(dropDistance > 0) {
         board_move_tetromino(bm, { 0, dropDistance });

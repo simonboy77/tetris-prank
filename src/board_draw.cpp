@@ -2,6 +2,10 @@
 static void
 board_push_tetromino(BoardManager *bm, Image *screen, int mouseBlockX, int mouseBlockY)
 {
+    u32 colour = bm->tetromino.colour;
+    u32 previewColour = (colour & 0x00FFFFFF) + 0x20000000;
+    u32 dropDistance = board_get_tetromino_drop_distance(bm);
+
     for(u32 blockId = 0; blockId < 4; ++blockId)
     {
         XY offset = board_shape_offset(bm->tetromino.shape, blockId, bm->tetromino.rotation);
@@ -9,7 +13,16 @@ board_push_tetromino(BoardManager *bm, Image *screen, int mouseBlockX, int mouse
         s32 offsetY = bm->tetromino.pos.y + offset.y;
 
         if((offsetX >= 0) && (offsetX < bm->width) && (offsetY >= 0) && (offsetY < bm->height)) {
-            push_block(screen, offsetX, offsetY, bm->tetromino.colour, mouseBlockX, mouseBlockY);
+            push_block(screen, offsetX, offsetY, colour, mouseBlockX, mouseBlockY);
+        }
+
+        if(dropDistance > 0) {
+            offsetY += dropDistance;
+
+            if((offsetX >= 0) && (offsetX < bm->width) && (offsetY >= 0) && (offsetY < bm->height)) {
+                //push_block_outline(screen, offsetX, offsetY, previewColour, mouseBlockX, mouseBlockY);
+                push_block(screen, offsetX, offsetY, previewColour, mouseBlockX, mouseBlockY);
+            }
         }
     }
 }

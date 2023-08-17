@@ -1,4 +1,46 @@
 static void
+push_rect_outline(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 borderPx = BORDER_PX)
+{
+    if(colour & 0xFF000000)
+    {
+        if ((x + width) > screen->width) {
+            width = screen->width - x;
+        }
+        if ((y + height) > screen->height) {
+            height = screen->height - y;
+        }
+
+        // Top bar
+        for(u32 yAt = y; yAt < (y + borderPx); ++yAt) {
+            for(u32 xAt = x; xAt < (x + width); ++xAt) {
+                screen->pixels[(yAt * screen->width) + xAt] = colour;
+            }
+        }
+
+        // Left column
+        for(u32 yAt = (y + borderPx); yAt < (y + (height - borderPx)); ++yAt) {
+            for(u32 xAt = x; xAt < (x + borderPx); ++xAt) {
+                screen->pixels[(yAt * screen->width) + xAt] = colour;
+            }
+        }
+
+        // Right column
+        for(u32 yAt = (y + borderPx); yAt < (y + (height - borderPx)); ++yAt) {
+            for(u32 xAt = (x + (width - borderPx)); xAt < (x + width); ++xAt) {
+                screen->pixels[(yAt * screen->width) + xAt] = colour;
+            }
+        }
+
+        // Bottom bar
+        for(u32 yAt = (y + (height - borderPx)); yAt < (y + height); ++yAt) {
+            for(u32 xAt = x; xAt < (x+ width); ++xAt) {
+                screen->pixels[(yAt * screen->width) + xAt] = colour;
+            }
+        }
+    }
+}
+
+static void
 push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 borderPx = BORDER_PX)
 {
     // NOTE(michiel): Colour is 0xAARRGGBB
@@ -21,7 +63,7 @@ push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 bo
         for (u32 yAt = y; yAt < y + height; ++yAt) // draw border as black background
         {
             for (u32 xAt = x; xAt < x + width; ++xAt) {
-                screen->pixels[yAt * screen->width + xAt] = borderColour;
+                screen->pixels[(yAt * screen->width) + xAt] = borderColour;
             }
         }
         
@@ -34,10 +76,23 @@ push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 bo
         for (u32 yAt = y; yAt < y + height; ++yAt)
         {
             for (u32 xAt = x; xAt < x + width; ++xAt) {
-                screen->pixels[yAt * screen->width + xAt] = colour;
+                screen->pixels[(yAt * screen->width) + xAt] = colour;
             }
         }
     }
+}
+
+static void
+push_block_outline(Image *screen, u32 x, u32 y, u32 colour, int mouseBlockX, int mouseBlockY, u32 borderPx = BORDER_PX)
+{
+    // colour = 0xFFFFFFFF;
+    // colour = 0xFF000000;
+    colour = 0xFF808080;
+
+    x *= BLOCK_SIDE;
+    y *= BLOCK_SIDE;
+
+    push_rect_outline(screen, x, y, BLOCK_SIDE, BLOCK_SIDE, colour, borderPx);
 }
 
 static void
@@ -83,7 +138,7 @@ x_get_mouse_block(XState *xState, int *mouseBlockX, int *mouseBlockY)
 }
 
 static b32
-x_get_keys(XState *xState, Key *left, Key *right, Key *up, Key *down, Key *esc)
+x_get_keys(XState *xState, Key *left, Key *right, Key *up, Key *down, Key *esc, Key *shift)
 {
     // TODO: Check if there are keycodes
     Key leftPrev  = *left;
@@ -91,6 +146,7 @@ x_get_keys(XState *xState, Key *left, Key *right, Key *up, Key *down, Key *esc)
     Key upPrev    = *up;
     Key downPrev  = *down;
     Key escPrev   = *esc;
+    Key shiftPrev   = *shift;
     
     char keyStates[32];
     XQueryKeymap(xState->display, keyStates);
@@ -100,20 +156,40 @@ x_get_keys(XState *xState, Key *left, Key *right, Key *up, Key *down, Key *esc)
     up->isDown    = keyStates[13] & 0x80; // byte 14, bit 8
     down->isDown  = keyStates[14] & 0x10; // byte 15, bit 5
     esc->isDown   = keyStates[1]  & 0x02; // byte 2,  bit 7
+    shift->isDown = keyStates[6]  & 0x04; // byte 7,  bit 3
 
-    left->isPressed  = (!leftPrev.isDown && left->isDown);
+    left->isPressed  = (!leftPrev.isDown  && left->isDown);
     right->isPressed = (!rightPrev.isDown && right->isDown);
-    up->isPressed    = (!upPrev.isDown && up->isDown);
-    down->isPressed  = (!downPrev.isDown && down->isDown);
-    esc->isPressed   = (!escPrev.isDown && esc->isDown);
+    up->isPressed    = (!upPrev.isDown    && up->isDown);
+    down->isPressed  = (!downPrev.isDown  && down->isDown);
+    esc->isPressed   = (!escPrev.isDown   && esc->isDown);
+    shift->isPressed = (!shiftPrev.isDown && shift->isDown);
     
     left->isReleased  = (leftPrev.isDown  && !left->isDown);
     right->isReleased = (rightPrev.isDown && !right->isDown);
     up->isReleased    = (upPrev.isDown    && !up->isDown);
     down->isReleased  = (downPrev.isDown  && !down->isDown);
     esc->isReleased   = (escPrev.isDown   && !esc->isDown);
+    shift->isReleased = (shiftPrev.isDown && !shift->isDown);
     
-    return (leftPrev != *left) || (rightPrev != *right) || (upPrev != *up) || (downPrev != *down) || (escPrev != *esc);
+    return (leftPrev != *left) || (rightPrev != *right) || (upPrev != *up) || (downPrev != *down) || 
+        (escPrev != *esc) ||   (shiftPrev != *shift);
+
+    /*
+    for(u32 keyState = 0; keyState < 32; ++keyState)
+    {
+        printf("byte %u: 0b", keyState);
+
+        for(s32 byteId = 7; byteId >= 0; --byteId)
+        {
+            printf("%i", ((keyStates[keyState] >> byteId) & 0x01));
+        }
+
+        printf("\n");
+    }
+
+    printf("\n\n");
+    */
 }
 
 static void

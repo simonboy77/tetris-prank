@@ -55,8 +55,8 @@ int main(int argCount, char **arguments)
         int mouseBlockX = 0, mouseBlockY = 0;
         x_get_mouse_block(&xState, &mouseBlockX, &mouseBlockY);
 
-        Key left = {}, right = {}, up = {}, down = {}, esc = {};
-        x_get_keys(&xState, &left, &right, &up, &down, &esc);
+        Key left = {}, right = {}, up = {}, down = {}, esc = {}, shift = {};
+        x_get_keys(&xState, &left, &right, &up, &down, &esc, &shift);
         
         f32 lastBoardUpdate = 0.0f, lastMouseQuery = 0.0f, lastKeysQuery = 0.0f, lastMovementX = 0.0f, lastMovementY = 0.0f;
         timespec timeStamp = get_wall_clock();
@@ -93,7 +93,7 @@ int main(int argCount, char **arguments)
             }
             
             if(lastKeysQuery >= KEYS_QUERY_TIME) {
-                if(x_get_keys(&xState, &left, &right, &up, &down, &esc))
+                if(x_get_keys(&xState, &left, &right, &up, &down, &esc, &shift))
                 {
                     if(left.isPressed && board_move_tetromino_left(&bm)) {
                         lastMovementX = 0.0f;
@@ -117,7 +117,10 @@ int main(int argCount, char **arguments)
                         isRunning = false;
                     }
 
-                    // If board_drop_tetromino() { lastBoardUpdate = BOARD_UPDATE_TIME; refresh = true; }
+                    if(shift.isPressed && board_drop_tetromino(&bm)) {
+                        lastBoardUpdate = BOARD_UPDATE_TIME;
+                        refresh = true;
+                    }
                 }
                 
                 lastKeysQuery -= KEYS_QUERY_TIME;
