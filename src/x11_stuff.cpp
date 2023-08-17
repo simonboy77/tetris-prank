@@ -1,3 +1,5 @@
+#include "x11_util.cpp"
+
 static void
 push_rect_outline(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 borderPx = BORDER_PX)
 {
@@ -53,11 +55,7 @@ push_rect(Image *screen, u32 x, u32 y, u32 width, u32 height, u32 colour, u32 bo
             height = screen->height - y;
         }
         
-        u32 borderAlpha = colour & 0xFF000000;
-        u32 borderRed = (((colour & 0xFF0000) >> 16) / BORDER_DARKEN_FACTOR) << 16;
-        u32 borderGreen = (((colour & 0xFF00) >> 8) / BORDER_DARKEN_FACTOR) << 8;
-        u32 borderBlue = (colour & 0xFF) / BORDER_DARKEN_FACTOR;
-        u32 borderColour = borderAlpha + borderRed + borderGreen + borderBlue;
+        u32 borderColour = darken(colour, BORDER_DARKEN_FACTOR);
         
         // TODO: inefficient as heck
         for (u32 yAt = y; yAt < y + height; ++yAt) // draw border as black background
